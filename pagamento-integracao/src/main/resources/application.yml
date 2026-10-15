@@ -1,0 +1,40 @@
+# pagamento-integracao: ponte entre a fila pagamento.solicitado e o Banco Tranquilo.
+spring:
+  application:
+    name: pagamento-integracao
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        # Uma mensagem que falhou de vez NAO volta para a fila:
+        # e rejeitada e o RabbitMQ a envia para a DLX -> pagamento.solicitado.dlq
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          # 1 tentativa + 4 retentativas = 5 chamadas ao banco
+          max-retries: ${INTEGRACAO_MAX_RETENTATIVAS:4}
+          # backoff exponencial: 2s, 4s, 8s, 10s (~24s ate a DLQ)
+          initial-interval: ${INTEGRACAO_INTERVALO_INICIAL:2s}
+          multiplier: 2
+          max-interval: 10s
+
+server:
+  port: ${SERVER_PORT:8081}
+
+banco-tranquilo:
+  url: ${BANCO_URL:http://localhost:8082}
+  connect-timeout: 2s
+  read-timeout: 5s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    br.com.fiap.pagamentointegracao: INFO
