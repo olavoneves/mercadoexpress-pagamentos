@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  POM agregador (reactor) do Checkpoint 5 - Parte II.
+
+  Os tres servicos foram gerados pelo Spring Initializr e continuam herdando
+  do spring-boot-starter-parent, como saíram de la. Este arquivo apenas os
+  reune num build so: ./mvnw clean package na raiz compila o mercado-commons
+  primeiro e depois os servicos que dependem dele.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>br.com.fiap</groupId>
+	<artifactId>mercadoexpress-pagamentos</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>mercadoexpress-pagamentos</name>
+	<description>Checkpoint 5 - Parte II: microsservicos de pagamento com RabbitMQ</description>
+
+	<modules>
+		<module>mercado-commons</module>
+		<module>banco-tranquilo-api</module>
+		<module>pagamento-integracao</module>
+		<module>mercado-express</module>
+	</modules>
+</project>
