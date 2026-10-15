@@ -1,0 +1,69 @@
+# mercado-express: vitrine, carrinho, API de compras, e-mail e dashboard.
+# Tudo que muda entre ambientes vem de variavel de ambiente (veja o README).
+spring:
+  application:
+    name: mercado-express
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/mercadoexpress}
+    username: ${DB_USER:mercado}
+    password: ${DB_PASSWORD:mercado}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Quem cria as tabelas e o database/script.sql
+      ddl-auto: validate
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        # Resultado que nao pode ser aplicado (ex.: banco de dados fora)
+        # vai para pagamento.processado.dlq em vez de voltar para a fila em loop
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-retries: 3
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 5s
+
+  # SMTP: Mailpit no docker compose; Gmail com senha de app em producao (README)
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+server:
+  port: ${SERVER_PORT:8080}
+
+mercado:
+  # Remetente dos e-mails. Com Gmail precisa ser a propria conta autenticada.
+  email-remetente: ${MAIL_FROM:Mercado Express <pedidos@mercadoexpress.local>}
+  # Endereco usado nos links dos e-mails
+  url-publica: ${APP_URL:http://localhost:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    br.com.fiap.mercadoexpress: INFO
