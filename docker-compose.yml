@@ -1,0 +1,132 @@
+# Mercado Express - Checkpoint 5 Parte II: ambiente completo.
+#
+#   docker compose up --build      -> sobe tudo do zero
+#   docker compose down -v         -> derruba tudo e APAGA o volume do banco
+#
+# Enderecos depois de subir:
+#   http://localhost:8080            loja (vitrine, carrinho, /gerencia)
+#   http://localhost:8081/actuator/health   pagamento-integracao
+#   http://localhost:8082/api/pagamentos/regras   Banco Tranquilo (mock)
+#   http://localhost:15672           painel do RabbitMQ (guest / guest)
+#   http://localhost:8025            Mailpit (e-mails capturados)
+#   localhost:5434                   PostgreSQL (mercado / mercado)
+#
+# Portas do host e SMTP podem ser trocadas num arquivo .env (veja .env.example).
+# Credenciais abaixo sao de ambiente LOCAL e descartavel.
+
+x-fuso: &fuso
+  TZ: America/Sao_Paulo
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: mercadoexpress-pg
+    environment:
+      <<: *fuso
+      PGTZ: America/Sao_Paulo
+      POSTGRES_DB: mercadoexpress
+      POSTGRES_USER: mercado
+      POSTGRES_PASSWORD: mercado
+    ports:
+      # 5434 no host para nao brigar com um PostgreSQL instalado na maquina
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - dados-postgres:/var/lib/postgresql/data
+      # roda sozinho na primeira subida (volume vazio)
+      - ./database/script.sql:/docker-entrypoint-initdb.d/01-script.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mercado -d mercadoexpress"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: mercadoexpress-rabbitmq
+    environment:
+      <<: *fuso
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_PAINEL_PORT:-15672}:15672"
+    volumes:
+      - dados-rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: mercadoexpress-mailpit
+    environment:
+      <<: *fuso
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+
+  banco-tranquilo-api:
+    build:
+      context: .
+      dockerfile: banco-tranquilo-api/Dockerfile
+    image: mercadoexpress/banco-tranquilo-api
+    container_name: banco-tranquilo-api
+    environment:
+      <<: *fuso
+    ports:
+      - "${BANCO_PORT:-8082}:8082"
+
+  pagamento-integracao:
+    build:
+      context: .
+      dockerfile: pagamento-integracao/Dockerfile
+    image: mercadoexpress/pagamento-integracao
+    container_name: pagamento-integracao
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      banco-tranquilo-api:
+        condition: service_started
+    environment:
+      <<: *fuso
+      RABBITMQ_HOST: rabbitmq
+      BANCO_URL: http://banco-tranquilo-api:8082
+    ports:
+      - "${INTEGRACAO_PORT:-8081}:8081"
+
+  mercado-express:
+    build:
+      context: .
+      dockerfile: mercado-express/Dockerfile
+    image: mercadoexpress/mercado-express
+    container_name: mercado-express
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      <<: *fuso
+      DB_URL: jdbc:postgresql://postgres:5432/mercadoexpress
+      DB_USER: mercado
+      DB_PASSWORD: mercado
+      RABBITMQ_HOST: rabbitmq
+      # SMTP: Mailpit por padrao; para Gmail real, preencha o .env (README)
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-false}
+      MAIL_FROM: ${MAIL_FROM:-Mercado Express <pedidos@mercadoexpress.local>}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+    ports:
+      - "${MERCADO_PORT:-8080}:8080"
+
+volumes:
+  dados-postgres:
+  dados-rabbitmq:
