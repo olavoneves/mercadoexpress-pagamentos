@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -28,6 +30,8 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 @RequiredArgsConstructor
 public class AnalisePagamentoService {
+
+    private static final NumberFormat REAL = NumberFormat.getCurrencyInstance(Locale.of("pt", "BR"));
 
     private final RegrasBancoProperties regras;
 
@@ -51,13 +55,13 @@ public class AnalisePagamentoService {
     /** Regras puras, sem atraso: e o que os testes exercitam. */
     public Optional<String> motivoDeRecusa(PagamentoRequest pedido) {
         if (pedido.getValor().compareTo(regras.getLimiteValor()) > 0) {
-            return Optional.of("Valor acima do limite de R$ " + regras.getLimiteValor() + " por transacao");
+            return Optional.of("Valor acima do limite de " + REAL.format(regras.getLimiteValor()) + " por transação");
         }
         if (somenteDigitos(pedido.getNumeroCartao()).endsWith(regras.getSufixoCartaoRecusado())) {
-            return Optional.of("Cartao recusado pelo emissor");
+            return Optional.of("Cartão recusado pelo emissor");
         }
         if (regras.getCpfsBloqueados().contains(somenteDigitos(pedido.getCpf()))) {
-            return Optional.of("CPF com restricao cadastral");
+            return Optional.of("CPF com restrição cadastral");
         }
         return Optional.empty();
     }

@@ -58,14 +58,14 @@ class AnalisePagamentoServiceTests {
     @Test
     void recusaCartaoTerminadoEm0000() {
         assertThat(analise.motivoDeRecusa(pedido("10.00", "4111 1111 1111 0000", "52998224725")))
-                .hasValue("Cartao recusado pelo emissor");
+                .hasValue("Cartão recusado pelo emissor");
     }
 
     @Test
     void recusaCpfBloqueadoComOuSemMascara() {
         assertThat(analise.motivoDeRecusa(pedido("10.00", "4111111111111111", "111.111.111-11")))
-                .hasValue("CPF com restricao cadastral");
+                .hasValue("CPF com restrição cadastral");
         assertThat(analise.motivoDeRecusa(pedido("10.00", "4111111111111111", "11111111111")))
-                .hasValue("CPF com restricao cadastral");
+                .hasValue("CPF com restrição cadastral");
     }
 }

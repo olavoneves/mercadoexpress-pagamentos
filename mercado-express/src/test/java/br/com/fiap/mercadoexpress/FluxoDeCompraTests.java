@@ -100,7 +100,7 @@ class FluxoDeCompraTests {
         return PagamentoProcessadoEvent.builder()
                 .compraId(compraId).status(status)
                 .codigoAutorizacao(status == StatusPagamento.APROVADO ? "BT000123" : null)
-                .motivo(status == StatusPagamento.APROVADO ? "Pagamento aprovado" : "Cartao recusado pelo emissor")
+                .motivo(status == StatusPagamento.APROVADO ? "Pagamento aprovado" : "Cartão recusado pelo emissor")
                 .transacaoId("tx-1").build();
     }
 
