@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<!--
+  E-mail com o resultado da compra. Clientes de e-mail ignoram <style> e
+  fontes externas, entao tudo aqui e tabela + estilo inline, com a mesma
+  paleta da loja (verde-folha, amarelo-etiqueta, tinta).
+-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="|Pedido #${compra.id}|">Pedido #12</title>
+</head>
+<body style="margin:0;padding:0;background:#EDEFEC;font-family:Arial,Helvetica,sans-serif;color:#14181A;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EDEFEC;padding:24px 0;">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="600" cellpadding="0" cellspacing="0"
+                   style="max-width:600px;width:100%;background:#FFFFFF;border:1px solid #D5DAD4;">
+
+                <!-- Cabecalho verde com a marca -->
+                <tr>
+                    <td style="background:#0B6B3A;border-bottom:4px solid #FFD400;padding:20px 28px;">
+                        <span style="font-family:'Arial Narrow',Arial,sans-serif;font-size:26px;font-weight:bold;color:#FFFFFF;">
+                            Mercado <span style="color:#FFD400;">Express</span>
+                        </span>
+                    </td>
+                </tr>
+
+                <!-- Faixa de status -->
+                <tr th:if="${compra.status.name() == 'APROVADO'}">
+                    <td style="padding:28px 28px 8px;">
+                        <span style="display:inline-block;background:#FFD400;color:#14181A;font-weight:bold;font-size:13px;padding:5px 12px;border:2px solid #14181A;">
+                            PAGAMENTO APROVADO
+                        </span>
+                        <h1 style="font-family:'Arial Narrow',Arial,sans-serif;font-size:28px;margin:16px 0 8px;">
+                            Oba, <span th:text="${#strings.arraySplit(compra.clienteNome, ' ')[0]}">Ana</span>! Seu pedido está confirmado.
+                        </h1>
+                        <p style="margin:0;color:#59615C;font-size:15px;line-height:1.5;">
+                            O Banco Tranquilo aprovou o pagamento e já separamos os produtos na banca.
+                        </p>
+                    </td>
+                </tr>
+                <tr th:if="${compra.status.name() == 'RECUSADO'}">
+                    <td style="padding:28px 28px 8px;">
+                        <span style="display:inline-block;background:#FCEDEC;color:#B3261E;font-weight:bold;font-size:13px;padding:5px 12px;border:2px solid #B3261E;">
+                            PAGAMENTO RECUSADO
+                        </span>
+                        <h1 style="font-family:'Arial Narrow',Arial,sans-serif;font-size:28px;margin:16px 0 8px;">
+                            <span th:text="${#strings.arraySplit(compra.clienteNome, ' ')[0]}">Ana</span>, não conseguimos concluir seu pedido.
+                        </h1>
+                        <p style="margin:0;color:#59615C;font-size:15px;line-height:1.5;">
+                            Motivo informado pelo banco: <strong style="color:#14181A;" th:text="${compra.motivo}">Cartão recusado</strong>.
+                            Nenhum valor foi cobrado e o estoque não foi reservado.
+                        </p>
+                    </td>
+                </tr>
+
+                <!-- Dados do pedido -->
+                <tr>
+                    <td style="padding:20px 28px 4px;">
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
+                            <tr>
+                                <td style="color:#59615C;padding:4px 0;">Pedido</td>
+                                <td align="right" style="font-weight:bold;" th:text="|#${compra.id}|">#12</td>
+                            </tr>
+                            <tr>
+                                <td style="color:#59615C;padding:4px 0;">Data</td>
+                                <td align="right" th:text="${#temporals.format(compra.dataCriacao, 'dd/MM/yyyy HH:mm')}">18/10/2026 14:30</td>
+                            </tr>
+                            <tr>
+                                <td style="color:#59615C;padding:4px 0;">Cartão</td>
+                                <td align="right" th:text="|final ${compra.cartaoFinal}|">final 1111</td>
+                            </tr>
+                            <tr th:if="${compra.codigoAutorizacao}">
+                                <td style="color:#59615C;padding:4px 0;">Autorização</td>
+                                <td align="right" style="font-family:Consolas,monospace;" th:text="${compra.codigoAutorizacao}">BT123456</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- Itens -->
+                <tr>
+                    <td style="padding:16px 28px;">
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;border-collapse:collapse;">
+                            <tr>
+                                <th align="left" style="background:#14181A;color:#FFFFFF;padding:8px;font-size:12px;">Produto</th>
+                                <th align="right" style="background:#14181A;color:#FFFFFF;padding:8px;font-size:12px;">Qtd</th>
+                                <th align="right" style="background:#14181A;color:#FFFFFF;padding:8px;font-size:12px;">Unitário</th>
+                                <th align="right" style="background:#14181A;color:#FFFFFF;padding:8px;font-size:12px;">Subtotal</th>
+                            </tr>
+                            <tr th:each="item, st : ${compra.itens}"
+                                th:style="${st.odd} ? 'background:#FFFFFF' : 'background:#EDEFEC'">
+                                <td style="padding:8px;border-bottom:1px solid #D5DAD4;" th:text="${item.produto.nome}">Banana prata</td>
+                                <td align="right" style="padding:8px;border-bottom:1px solid #D5DAD4;" th:text="${item.quantidade}">2</td>
+                                <td align="right" style="padding:8px;border-bottom:1px solid #D5DAD4;"
+                                    th:text="|R$ ${#numbers.formatDecimal(item.precoUnitario, 1, 'POINT', 2, 'COMMA')}|">R$ 7,99</td>
+                                <td align="right" style="padding:8px;border-bottom:1px solid #D5DAD4;"
+                                    th:text="|R$ ${#numbers.formatDecimal(item.subtotal, 1, 'POINT', 2, 'COMMA')}|">R$ 15,98</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" align="right" style="padding:14px 8px 0;font-weight:bold;">Total</td>
+                                <td align="right" style="padding:14px 8px 0;">
+                                    <span style="display:inline-block;background:#FFD400;border:2px solid #14181A;padding:4px 10px;font-family:'Arial Narrow',Arial,sans-serif;font-size:20px;font-weight:bold;"
+                                          th:text="|R$ ${#numbers.formatDecimal(compra.valorTotal, 1, 'POINT', 2, 'COMMA')}|">R$ 15,98</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- CTA -->
+                <tr>
+                    <td style="padding:8px 28px 28px;">
+                        <a th:href="${linkPedido}" href="#"
+                           style="display:inline-block;background:#0B6B3A;color:#FFFFFF;text-decoration:none;font-weight:bold;padding:12px 20px;">
+                            Acompanhar pedido
+                        </a>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="background:#14181A;color:#B9BFBB;font-size:12px;padding:16px 28px;">
+                        Mercado Express &middot; Checkpoint 5 - Parte II &middot; FIAP TDS<br>
+                        Mensagem automática enviada após a confirmação do Banco Tranquilo.
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

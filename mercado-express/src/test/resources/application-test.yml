@@ -1,0 +1,22 @@
+# Perfil dos testes: H2 em memoria no lugar do PostgreSQL, listeners parados
+# (sem broker) e um SMTP inexistente para exercitar o registro de FALHA.
+spring:
+  datasource:
+    url: jdbc:h2:mem:mercado;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
+  mail:
+    host: 127.0.0.1
+    port: 1
+    properties:
+      mail:
+        smtp:
+          connectiontimeout: 1000
+          timeout: 1000
