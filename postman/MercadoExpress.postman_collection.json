@@ -1,0 +1,199 @@
+{
+  "info": {
+    "_postman_id": "6f1c2a8e-5b0d-4c35-9a3e-cp5parte2fiap",
+    "name": "Mercado Express - CP5 Parte II (RabbitMQ)",
+    "description": "Fluxo assincrono de pagamento: POST /api/compras devolve 202 com a compra PENDENTE; o resultado (APROVADO/RECUSADO) chega pelo RabbitMQ e e consultado em GET /api/compras/{id}.\n\nOrdem sugerida: 1 -> 2 (aguarde ~2s) -> 3, depois as recusadas. Cada POST de compra grava o id em {{compraId}}.\n\nSuba tudo antes com: docker compose up --build",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "mercadoUrl", "value": "http://localhost:8080" },
+    { "key": "bancoUrl", "value": "http://localhost:8082" },
+    { "key": "compraId", "value": "43" }
+  ],
+  "item": [
+    {
+      "name": "1. Listar produtos (descobrir produtoId)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{mercadoUrl}}/api/produtos", "host": ["{{mercadoUrl}}"], "path": ["api", "produtos"] }
+      }
+    },
+    {
+      "name": "2. Criar compra APROVADA",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('202 Accepted', () => pm.response.to.have.status(202));",
+              "pm.test('nasce PENDENTE', () => pm.expect(pm.response.json().status).to.eql('PENDENTE'));",
+              "pm.collectionVariables.set('compraId', pm.response.json().id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cliente\": {\n    \"nome\": \"Ana Souza\",\n    \"email\": \"ana.souza@exemplo.com\",\n    \"cpf\": \"529.982.247-25\"\n  },\n  \"pagamento\": {\n    \"numeroCartao\": \"4111 1111 1111 1111\",\n    \"titular\": \"ANA SOUZA\"\n  },\n  \"itens\": [\n    { \"produtoId\": 1, \"quantidade\": 3 },\n    { \"produtoId\": 6, \"quantidade\": 2 }\n  ]\n}"
+        },
+        "url": { "raw": "{{mercadoUrl}}/api/compras", "host": ["{{mercadoUrl}}"], "path": ["api", "compras"] },
+        "description": "Cartao 4111... e CPF fora da lista de bloqueio, total abaixo de R$ 5.000: o Banco Tranquilo aprova."
+      }
+    },
+    {
+      "name": "3. Consultar status da compra",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "console.log('status:', pm.response.json().status, '| motivo:', pm.response.json().motivo);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{mercadoUrl}}/api/compras/{{compraId}}",
+          "host": ["{{mercadoUrl}}"],
+          "path": ["api", "compras", "{{compraId}}"]
+        },
+        "description": "Logo depois do POST vem PENDENTE; ~1-2s depois, APROVADO ou RECUSADO, com codigo de autorizacao, motivo e o registro do e-mail."
+      }
+    },
+    {
+      "name": "4. Criar compra RECUSADA (cartao final 0000)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('202 Accepted', () => pm.response.to.have.status(202));",
+              "pm.collectionVariables.set('compraId', pm.response.json().id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cliente\": {\n    \"nome\": \"Bruno Lima\",\n    \"email\": \"bruno.lima@exemplo.com\",\n    \"cpf\": \"529.982.247-25\"\n  },\n  \"pagamento\": {\n    \"numeroCartao\": \"5555 4444 3333 0000\",\n    \"titular\": \"BRUNO LIMA\"\n  },\n  \"itens\": [\n    { \"produtoId\": 7, \"quantidade\": 1 }\n  ]\n}"
+        },
+        "url": { "raw": "{{mercadoUrl}}/api/compras", "host": ["{{mercadoUrl}}"], "path": ["api", "compras"] },
+        "description": "Recusada: cartao terminado em 0000. Depois rode o item 3 para ver o motivo."
+      }
+    },
+    {
+      "name": "5. Criar compra RECUSADA (CPF bloqueado)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('202 Accepted', () => pm.response.to.have.status(202));",
+              "pm.collectionVariables.set('compraId', pm.response.json().id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cliente\": {\n    \"nome\": \"Carla Mendes\",\n    \"email\": \"carla.mendes@exemplo.com\",\n    \"cpf\": \"111.111.111-11\"\n  },\n  \"pagamento\": {\n    \"numeroCartao\": \"4111 1111 1111 1111\",\n    \"titular\": \"CARLA MENDES\"\n  },\n  \"itens\": [\n    { \"produtoId\": 9, \"quantidade\": 2 }\n  ]\n}"
+        },
+        "url": { "raw": "{{mercadoUrl}}/api/compras", "host": ["{{mercadoUrl}}"], "path": ["api", "compras"] }
+      }
+    },
+    {
+      "name": "6. Criar compra RECUSADA (valor acima de R$ 5.000)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('202 Accepted', () => pm.response.to.have.status(202));",
+              "pm.collectionVariables.set('compraId', pm.response.json().id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cliente\": {\n    \"nome\": \"Diego Rocha\",\n    \"email\": \"diego.rocha@exemplo.com\",\n    \"cpf\": \"529.982.247-25\"\n  },\n  \"pagamento\": {\n    \"numeroCartao\": \"4111 1111 1111 1111\",\n    \"titular\": \"DIEGO ROCHA\"\n  },\n  \"itens\": [\n    { \"produtoId\": 14, \"quantidade\": 14 },\n    { \"produtoId\": 16, \"quantidade\": 2 }\n  ]\n}"
+        },
+        "url": { "raw": "{{mercadoUrl}}/api/compras", "host": ["{{mercadoUrl}}"], "path": ["api", "compras"] },
+        "description": "14 kits churrasco + 2 cafeteiras = R$ 5.338,40: acima do limite do banco."
+      }
+    },
+    {
+      "name": "7. Validacao: corpo invalido (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('400 Bad Request', () => pm.response.to.have.status(400));"]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"itens\": []\n}" },
+        "url": { "raw": "{{mercadoUrl}}/api/compras", "host": ["{{mercadoUrl}}"], "path": ["api", "compras"] }
+      }
+    },
+    {
+      "name": "8. Banco Tranquilo direto - aprovado",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"compraId\": 999,\n  \"valor\": 120.50,\n  \"cpf\": \"529.982.247-25\",\n  \"numeroCartao\": \"4111 1111 1111 1111\",\n  \"titular\": \"ANA SOUZA\"\n}"
+        },
+        "url": { "raw": "{{bancoUrl}}/api/pagamentos", "host": ["{{bancoUrl}}"], "path": ["api", "pagamentos"] },
+        "description": "Chama a API mock sincronamente, sem passar pelo RabbitMQ."
+      }
+    },
+    {
+      "name": "9. Banco Tranquilo direto - recusado",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"compraId\": 1000,\n  \"valor\": 89.90,\n  \"cpf\": \"529.982.247-25\",\n  \"numeroCartao\": \"4111 1111 1111 0000\",\n  \"titular\": \"ANA SOUZA\"\n}"
+        },
+        "url": { "raw": "{{bancoUrl}}/api/pagamentos", "host": ["{{bancoUrl}}"], "path": ["api", "pagamentos"] }
+      }
+    },
+    {
+      "name": "10. Banco Tranquilo - regras em vigor",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{bancoUrl}}/api/pagamentos/regras", "host": ["{{bancoUrl}}"], "path": ["api", "pagamentos", "regras"] }
+      }
+    }
+  ]
+}
