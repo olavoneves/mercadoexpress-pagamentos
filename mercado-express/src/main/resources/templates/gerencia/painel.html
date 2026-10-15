@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<!-- GET /gerencia - dashboard de gerencia (Chart.js). -->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: cabeca('Gerência')}"></head>
+<body>
+
+<a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
+<header th:replace="~{fragments/layout :: topo('gerencia')}"></header>
+
+<main id="conteudo" class="conteudo conteudo--painel">
+    <div class="envelope">
+
+        <div class="abertura">
+            <div>
+                <p class="sobretitulo">Painel da gerência</p>
+                <h1>Como está a feira</h1>
+                <p>Faturamento e lucro consideram só pedidos aprovados pelo Banco Tranquilo.</p>
+            </div>
+            <nav class="filtros filtros--sem-margem" aria-label="Período">
+                <span class="filtros__rotulo">Período</span>
+                <a class="chip" th:each="p : ${periodos}" th:href="@{/gerencia(dias=${p})}"
+                   th:attr="aria-current=${p == painel.dias} ? 'true' : null"
+                   th:text="|${p} dias|">30 dias</a>
+                <a class="chip" th:href="@{/gerencia(dias=${painel.dias})}" title="Recarregar os números">Atualizar</a>
+            </nav>
+        </div>
+
+        <!-- ============ KPIs ============ -->
+        <section class="kpis" aria-label="Indicadores do período">
+            <div class="kpi kpi--destaque">
+                <span class="kpi__rotulo">Faturamento</span>
+                <span class="kpi__valor" th:text="|R$ ${#numbers.formatDecimal(painel.faturamento, 1, 'POINT', 2, 'COMMA')}|">R$ 8.420,00</span>
+                <span class="kpi__nota" th:text="|últimos ${painel.dias} dias|">últimos 30 dias</span>
+            </div>
+            <div class="kpi">
+                <span class="kpi__rotulo">Lucro bruto</span>
+                <span class="kpi__valor" th:text="|R$ ${#numbers.formatDecimal(painel.lucro, 1, 'POINT', 2, 'COMMA')}|">R$ 2.900,00</span>
+                <span class="kpi__nota" th:text="|margem de ${#numbers.formatDecimal(painel.margemPercentual, 1, 'POINT', 1, 'COMMA')}%|">margem de 34,4%</span>
+            </div>
+            <div class="kpi">
+                <span class="kpi__rotulo">Ticket médio</span>
+                <span class="kpi__valor" th:text="|R$ ${#numbers.formatDecimal(painel.ticketMedio, 1, 'POINT', 2, 'COMMA')}|">R$ 248,00</span>
+                <span class="kpi__nota">por pedido aprovado</span>
+            </div>
+            <div class="kpi">
+                <span class="kpi__rotulo">Pedidos aprovados</span>
+                <span class="kpi__valor" th:text="${painel.aprovados}">34</span>
+                <span class="kpi__nota" th:text="|${#numbers.formatDecimal(painel.taxaAprovacao, 1, 'POINT', 1, 'COMMA')}% de aprovação|">81% de aprovação</span>
+            </div>
+            <div class="kpi">
+                <span class="kpi__rotulo">Pedidos recusados</span>
+                <span class="kpi__valor" th:text="${painel.recusados}">8</span>
+                <span class="kpi__nota" th:text="${painel.pendentes > 0} ? |${painel.pendentes} pendente(s) agora| : 'nenhum pendente agora'">nenhum pendente</span>
+            </div>
+        </section>
+
+        <!-- ============ Graficos ============ -->
+        <div class="painel-grade">
+            <section class="cartao-grafico cartao-grafico--largo">
+                <h2>Vendas por dia</h2>
+                <p class="cartao-grafico__sub">Pedidos aprovados e recusados por dia</p>
+                <div class="grafico"><canvas id="g-vendas" role="img" aria-label="Pedidos por dia"></canvas></div>
+            </section>
+
+            <section class="cartao-grafico cartao-grafico--largo">
+                <h2>Faturamento x lucro</h2>
+                <p class="cartao-grafico__sub">R$ por dia, só pedidos aprovados</p>
+                <div class="grafico"><canvas id="g-faturamento" role="img" aria-label="Faturamento e lucro por dia"></canvas></div>
+            </section>
+
+            <section class="cartao-grafico">
+                <h2>Top produtos</h2>
+                <p class="cartao-grafico__sub">Receita no período (R$)</p>
+                <div class="grafico grafico--alto"><canvas id="g-top" role="img" aria-label="Produtos mais vendidos"></canvas></div>
+            </section>
+
+            <section class="cartao-grafico">
+                <h2>Status dos pagamentos</h2>
+                <p class="cartao-grafico__sub">Respostas do Banco Tranquilo no período</p>
+                <div class="grafico grafico--alto"><canvas id="g-status" role="img" aria-label="Status dos pagamentos"></canvas></div>
+            </section>
+
+            <section class="cartao-grafico cartao-grafico--largo">
+                <div class="cartao-grafico__cabecalho">
+                    <div>
+                        <h2>Estoque por produto</h2>
+                        <p class="cartao-grafico__sub">Barras em vermelho estão no mínimo ou abaixo dele</p>
+                    </div>
+                    <ul class="alertas" th:unless="${#lists.isEmpty(painel.estoqueBaixo)}" aria-label="Estoque baixo">
+                        <li class="alerta-estoque" th:each="p : ${painel.estoqueBaixo}">
+                            <span aria-hidden="true">&#9888;</span>
+                            <strong th:text="${p.nome}">Alface crespa</strong>
+                            <span th:text="|${p.estoque} un. (mín. ${p.estoqueMinimo})|">4 un. (mín. 15)</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="grafico grafico--alto"><canvas id="g-estoque" role="img" aria-label="Estoque por produto"></canvas></div>
+            </section>
+
+            <!-- ============ Ultimos e-mails ============ -->
+            <section class="cartao-grafico">
+                <h2>Últimos e-mails</h2>
+                <p class="cartao-grafico__sub">Registro de TDS_EMAILS_MERCADO</p>
+                <ul class="lista-emails">
+                    <li th:each="e : ${painel.ultimosEmails}">
+                        <span class="selo" th:classappend="${e.status.name() == 'ENVIADO'} ? 'selo--enviado' : 'selo--falha'"
+                              th:text="${e.status.name() == 'ENVIADO'} ? 'Enviado' : 'Falha'">Enviado</span>
+                        <span class="lista-emails__texto">
+                            <strong th:text="${e.assunto}">Pedido #12 aprovado</strong>
+                            <span th:text="|${e.destinatario} · ${#temporals.format(e.dataEnvio, 'dd/MM HH:mm')}|">ana@exemplo.com · 18/10 14:30</span>
+                            <span class="lista-emails__erro" th:if="${e.erro}" th:text="${e.erro}">erro</span>
+                        </span>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- ============ Compras recentes ============ -->
+            <section class="cartao-grafico">
+                <h2>Compras recentes</h2>
+                <p class="cartao-grafico__sub">As 12 últimas, de qualquer período</p>
+                <div class="tabela-rolagem">
+                    <table class="tabela tabela--compacta">
+                        <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Cliente</th>
+                            <th scope="col" class="numero">Valor</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Quando</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="c : ${painel.comprasRecentes}">
+                            <td><a th:href="@{/pedidos/{id}(id=${c.id})}" th:text="${c.id}">42</a></td>
+                            <td>
+                                <span th:text="${c.clienteNome}">Ana Souza</span>
+                                <span class="tabela__mudo" th:text="|${c.itens} itens · ${c.origem}|">3 itens · LOJA</span>
+                            </td>
+                            <td class="numero" th:text="|R$ ${#numbers.formatDecimal(c.valorTotal, 1, 'POINT', 2, 'COMMA')}|">R$ 89,90</td>
+                            <td><span th:replace="~{fragments/layout :: seloStatus(${c.status})}"></span></td>
+                            <td class="tabela__mudo" th:text="${#temporals.format(c.dataCriacao, 'dd/MM HH:mm')}">18/10 14:30</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
+
+<script id="dados-graficos" type="application/json" th:utext="${graficosJson}">{}</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:src="@{/js/gerencia.js}"></script>
+</body>
+</html>
