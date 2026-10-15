@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+  GET /pedidos/{id} - acompanhamento do pedido. Enquanto PENDENTE, o
+  js/pedido.js consulta GET /api/compras/{id} e recarrega quando o banco responde.
+-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: cabeca(|Pedido #${compra.id}|)}"></head>
+<body>
+
+<a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
+<header th:replace="~{fragments/layout :: topo('pedido')}"></header>
+
+<main id="conteudo" class="conteudo">
+    <div class="envelope">
+
+        <div th:replace="~{fragments/layout :: avisos}"></div>
+
+        <div class="abertura">
+            <div>
+                <p class="sobretitulo" th:text="|Pedido #${compra.id} · ${compra.origem.name() == 'API' ? 'via API' : 'via loja'}|">Pedido #12</p>
+                <h1 th:text="${compra.status.rotulo}">Aguardando pagamento</h1>
+                <p th:text="|Feito em ${#temporals.format(compra.dataCriacao, 'dd/MM/yyyy HH:mm:ss')} por ${compra.clienteNome}|">
+                    Feito em 18/10/2026 14:30 por Ana Souza</p>
+            </div>
+            <a class="voltar" th:href="@{/}">&larr; Voltar para a vitrine</a>
+        </div>
+
+        <div class="pedido">
+            <!-- ============ Status ao vivo ============ -->
+            <section class="status-pedido"
+                     th:classappend="|status-pedido--${#strings.toLowerCase(compra.status.name())}|"
+                     th:attr="data-compra-id=${compra.id},data-status=${compra.status.name()},data-emails=${#lists.size(emails)}"
+                     aria-live="polite">
+                <span th:replace="~{fragments/layout :: seloStatus(${compra.status.name()})}"></span>
+
+                <p class="status-pedido__mensagem" th:if="${compra.status.name() == 'PENDENTE'}">
+                    Compra gravada e mensagem publicada em <code>pagamento.solicitado</code>.
+                    Aguardando o Banco Tranquilo&hellip;
+                    <span class="status-pedido__tempo" data-cronometro>0s</span>
+                </p>
+                <p class="status-pedido__mensagem" th:if="${compra.status.name() == 'APROVADO'}">
+                    Pagamento aprovado. Código de autorização
+                    <code th:text="${compra.codigoAutorizacao}">BT123456</code>.
+                </p>
+                <p class="status-pedido__mensagem" th:if="${compra.status.name() == 'RECUSADO'}">
+                    O banco recusou o pagamento: <strong th:text="${compra.motivo}">Cartão recusado</strong>.
+                </p>
+
+                <ol class="linha-do-tempo">
+                    <li class="linha-do-tempo__passo passo-feito">
+                        <strong>Pedido registrado</strong>
+                        <span>Status PENDENTE no PostgreSQL</span>
+                    </li>
+                    <li class="linha-do-tempo__passo passo-feito">
+                        <strong>Mensagem publicada</strong>
+                        <span>exchange <code>mercado.pagamentos</code> &rarr; <code>pagamento.solicitado</code></span>
+                    </li>
+                    <li class="linha-do-tempo__passo"
+                        th:classappend="${compra.status.final} ? 'passo-feito' : 'passo-atual'">
+                        <strong>Banco Tranquilo respondeu</strong>
+                        <span th:text="${compra.status.final} ? |${compra.status.name()} via pagamento.processado| : 'processando...'">processando...</span>
+                    </li>
+                    <li class="linha-do-tempo__passo"
+                        th:classappend="${!#lists.isEmpty(emails)} ? 'passo-feito'">
+                        <strong>E-mail ao cliente</strong>
+                        <span th:if="${#lists.isEmpty(emails)}">aguardando o resultado</span>
+                        <span th:each="e : ${emails}"
+                              th:text="|${e.status.name() == 'ENVIADO' ? 'Enviado' : 'Falhou'} para ${e.destinatario} às ${#temporals.format(e.dataEnvio, 'HH:mm:ss')}|">
+                            Enviado para ana@exemplo.com</span>
+                    </li>
+                </ol>
+            </section>
+
+            <!-- ============ Resumo ============ -->
+            <section class="bloco">
+                <h2>Resumo</h2>
+                <div class="tabela-rolagem">
+                    <table class="tabela tabela--compacta">
+                        <thead>
+                        <tr>
+                            <th scope="col">Produto</th>
+                            <th scope="col" class="numero">Qtd</th>
+                            <th scope="col" class="numero">Unitário</th>
+                            <th scope="col" class="numero">Subtotal</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="item : ${compra.itens}">
+                            <td class="produto-nome" th:text="${item.produto.nome}">Banana prata</td>
+                            <td class="numero" th:text="${item.quantidade}">2</td>
+                            <td class="numero" th:text="|R$ ${#numbers.formatDecimal(item.precoUnitario, 1, 'POINT', 2, 'COMMA')}|">R$ 7,99</td>
+                            <td class="numero" th:text="|R$ ${#numbers.formatDecimal(item.subtotal, 1, 'POINT', 2, 'COMMA')}|">R$ 15,98</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <dl class="ficha">
+                    <div><dt>Total</dt><dd th:text="|R$ ${#numbers.formatDecimal(compra.valorTotal, 1, 'POINT', 2, 'COMMA')}|">R$ 15,98</dd></div>
+                    <div><dt>Cartão</dt><dd th:text="|final ${compra.cartaoFinal}|">final 1111</dd></div>
+                    <div><dt>E-mail</dt><dd th:text="${compra.clienteEmail}">ana@exemplo.com</dd></div>
+                    <div><dt>Consulta na API</dt><dd><a th:href="@{/api/compras/{id}(id=${compra.id})}"
+                                                       th:text="|/api/compras/${compra.id}|">/api/compras/12</a></dd></div>
+                </dl>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
+<script th:src="@{/js/pedido.js}" defer></script>
+</body>
+</html>

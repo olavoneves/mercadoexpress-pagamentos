@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<!-- Pagina de erro padrao do Spring Boot (BasicErrorController) com a identidade da loja. -->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: cabeca('Erro')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topo('erro')}"></header>
+<main class="conteudo">
+    <div class="envelope recado">
+        <p class="recado__codigo" th:text="${status}">500</p>
+        <h1 th:text="${status == 404} ? 'Página não encontrada' : 'Algo saiu errado na banca'">Algo saiu errado</h1>
+        <p th:text="${status == 404} ? 'Confira o endereço digitado.' : 'Tente de novo em instantes.'">Tente de novo.</p>
+        <div class="recado__acoes">
+            <a class="botao" th:href="@{/}">Ir para a vitrine</a>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
+</body>
+</html>

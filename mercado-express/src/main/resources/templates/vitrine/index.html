@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!-- GET / - vitrine publica com os produtos ativos e o botao de adicionar ao carrinho. -->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: cabeca('Vitrine')}"></head>
+<body>
+
+<a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
+<header th:replace="~{fragments/layout :: topo('vitrine')}"></header>
+
+<main id="conteudo" class="conteudo">
+    <div class="envelope">
+
+        <div th:replace="~{fragments/layout :: avisos}"></div>
+
+        <div class="abertura">
+            <div>
+                <p class="sobretitulo">Compre agora, pague com o Banco Tranquilo</p>
+                <h1>A feira de hoje</h1>
+                <p>Escolha os produtos, finalize no carrinho e acompanhe o pagamento
+                    sendo processado em tempo real.</p>
+            </div>
+            <a class="botao botao--etiqueta" th:href="@{/carrinho}"
+               th:text="${qtdCarrinho > 0} ? |Ver carrinho (${qtdCarrinho})| : 'Carrinho vazio'">Ver carrinho</a>
+        </div>
+
+        <nav class="filtros" aria-label="Filtrar por setor">
+            <span class="filtros__rotulo">Setores</span>
+            <a class="chip" th:href="@{/}"
+               th:attr="aria-current=${setorSelecionado == null} ? 'true' : null">Todos</a>
+            <a class="chip" th:each="s : ${setores}" th:href="@{/(setor=${s})}"
+               th:attr="aria-current=${s == setorSelecionado} ? 'true' : null"
+               th:text="${s}">Hortifruti</a>
+        </nav>
+
+        <div class="vitrine" th:if="${!#lists.isEmpty(produtos)}">
+            <article class="produto produto--compra" th:each="produto : ${produtos}"
+                     th:id="|produto-${produto.id}|">
+
+                <span class="etiqueta">
+                    <span class="etiqueta__moeda">R$</span>
+                    <span th:text="${#numbers.formatDecimal(produto.precoVenda, 1, 'POINT', 2, 'COMMA')}">7,99</span>
+                </span>
+
+                <span class="produto__setor" th:text="${produto.setor}">Hortifruti</span>
+                <h2 class="produto__nome" th:text="${produto.nome}">Banana prata</h2>
+                <p class="produto__detalhe">
+                    <span th:text="${produto.tipo}">Fruta</span>
+                    <span th:if="${produto.tamanho}" th:text="'· ' + ${produto.tamanho}">· 1kg</span>
+                </p>
+
+                <div class="produto__rodape">
+                    <span class="selo selo--esgotado" th:if="${produto.esgotado}">Sem estoque hoje</span>
+                    <span class="selo selo--estoque" th:unless="${produto.esgotado}"
+                          th:text="${produto.estoque} + ' em estoque'">30 em estoque</span>
+                </div>
+
+                <form class="adicionar" th:action="@{/carrinho/adicionar}" method="post"
+                      th:unless="${produto.esgotado}">
+                    <input type="hidden" name="produtoId" th:value="${produto.id}">
+                    <input type="hidden" name="voltar"
+                           th:value="${setorSelecionado} ? |/?setor=${setorSelecionado}| : '/'">
+                    <label class="pular-para-conteudo" th:for="|qtd-${produto.id}|">Quantidade</label>
+                    <input class="adicionar__qtd" type="number" name="quantidade" value="1" min="1"
+                           th:id="|qtd-${produto.id}|" th:max="${produto.estoque}">
+                    <button type="submit" class="botao botao--compacto">Adicionar</button>
+                </form>
+            </article>
+        </div>
+
+        <div class="vazio" th:if="${#lists.isEmpty(produtos)}">
+            <h2>As gôndolas ainda estão vazias</h2>
+            <p>Rode o database/script.sql para carregar os produtos de exemplo.</p>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
+</body>
+</html>

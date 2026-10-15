@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<!-- GET /carrinho - itens, quantidades, total e finalizacao da compra. -->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: cabeca('Carrinho')}"></head>
+<body>
+
+<a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
+<header th:replace="~{fragments/layout :: topo('carrinho')}"></header>
+
+<main id="conteudo" class="conteudo">
+    <div class="envelope">
+
+        <div th:replace="~{fragments/layout :: avisos}"></div>
+
+        <div class="abertura">
+            <div>
+                <p class="sobretitulo">Seu carrinho</p>
+                <h1>Conferir e pagar</h1>
+                <p>Ajuste as quantidades e finalize. O pagamento é processado de forma
+                    assíncrona: você vai acompanhar a resposta do banco na próxima tela.</p>
+            </div>
+            <a class="voltar" th:href="@{/}">&larr; Continuar comprando</a>
+        </div>
+
+        <div class="vazio" th:if="${#lists.isEmpty(linhas)}">
+            <h2>Seu carrinho está vazio</h2>
+            <p>Passe na vitrine e escolha o que vai levar hoje.</p>
+            <a class="botao" th:href="@{/}">Ir para a vitrine</a>
+        </div>
+
+        <div class="carrinho" th:unless="${#lists.isEmpty(linhas)}">
+
+            <!-- ============ Itens ============ -->
+            <section class="carrinho__itens" aria-labelledby="titulo-itens">
+                <h2 id="titulo-itens" class="pular-para-conteudo">Itens do carrinho</h2>
+                <div class="tabela-rolagem">
+                    <table class="tabela tabela--carrinho">
+                        <thead>
+                        <tr>
+                            <th scope="col">Produto</th>
+                            <th scope="col" class="numero">Preço</th>
+                            <th scope="col">Quantidade</th>
+                            <th scope="col" class="numero">Subtotal</th>
+                            <th scope="col"><span class="pular-para-conteudo">Ações</span></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="linha : ${linhas}">
+                            <td>
+                                <span class="produto-nome" th:text="${linha.produto.nome}">Banana prata</span>
+                                <span class="tabela__mudo" th:text="|${linha.produto.setor} · ${linha.produto.tamanho}|">Hortifruti · 1kg</span>
+                                <span class="selo selo--esgotado" th:if="${linha.acimaDoEstoque}">acima do estoque</span>
+                            </td>
+                            <td class="numero"
+                                th:text="|R$ ${#numbers.formatDecimal(linha.produto.precoVenda, 1, 'POINT', 2, 'COMMA')}|">R$ 7,99</td>
+                            <td>
+                                <form class="quantidade" th:action="@{/carrinho/alterar}" method="post">
+                                    <input type="hidden" name="produtoId" th:value="${linha.produto.id}">
+                                    <label class="pular-para-conteudo" th:for="|qtd-${linha.produto.id}|">Quantidade</label>
+                                    <input type="number" name="quantidade" min="0" th:max="${linha.produto.estoque}"
+                                           th:id="|qtd-${linha.produto.id}|" th:value="${linha.quantidade}">
+                                    <button type="submit" class="acao-linha">Atualizar</button>
+                                </form>
+                            </td>
+                            <td class="numero"
+                                th:text="|R$ ${#numbers.formatDecimal(linha.subtotal, 1, 'POINT', 2, 'COMMA')}|">R$ 15,98</td>
+                            <td>
+                                <form th:action="@{/carrinho/remover}" method="post">
+                                    <input type="hidden" name="produtoId" th:value="${linha.produto.id}">
+                                    <button type="submit" class="acao-linha acao-linha--perigo">Remover</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="carrinho__total">
+                    <span>Total do pedido</span>
+                    <span class="etiqueta etiqueta--grande etiqueta--estatica">
+                        <span class="etiqueta__moeda">R$</span>
+                        <span th:text="${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}">15,98</span>
+                    </span>
+                </div>
+            </section>
+
+            <!-- ============ Finalizacao ============ -->
+            <section class="bloco carrinho__checkout" aria-labelledby="titulo-checkout">
+                <h2 id="titulo-checkout">Finalizar compra</h2>
+
+                <form th:action="@{/carrinho/finalizar}" th:object="${checkoutForm}" method="post" novalidate>
+                    <div class="campo" th:classappend="${#fields.hasErrors('nome')} ? 'campo--erro'">
+                        <label for="nome">Nome completo</label>
+                        <input id="nome" type="text" th:field="*{nome}" autocomplete="name">
+                        <span class="campo__erro" th:if="${#fields.hasErrors('nome')}" th:errors="*{nome}">erro</span>
+                    </div>
+                    <div class="campo" th:classappend="${#fields.hasErrors('email')} ? 'campo--erro'">
+                        <label for="email">E-mail</label>
+                        <input id="email" type="email" th:field="*{email}" autocomplete="email">
+                        <span class="campo__ajuda">A confirmação do pedido chega aqui.</span>
+                        <span class="campo__erro" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">erro</span>
+                    </div>
+                    <div class="campo" th:classappend="${#fields.hasErrors('cpf')} ? 'campo--erro'">
+                        <label for="cpf">CPF</label>
+                        <input id="cpf" type="text" th:field="*{cpf}" inputmode="numeric" placeholder="000.000.000-00">
+                        <span class="campo__erro" th:if="${#fields.hasErrors('cpf')}" th:errors="*{cpf}">erro</span>
+                    </div>
+                    <div class="campo" th:classappend="${#fields.hasErrors('numeroCartao')} ? 'campo--erro'">
+                        <label for="numeroCartao">Número do cartão</label>
+                        <input id="numeroCartao" type="text" th:field="*{numeroCartao}" inputmode="numeric"
+                               autocomplete="cc-number" placeholder="4111 1111 1111 1111">
+                        <span class="campo__erro" th:if="${#fields.hasErrors('numeroCartao')}"
+                              th:errors="*{numeroCartao}">erro</span>
+                    </div>
+                    <div class="campo" th:classappend="${#fields.hasErrors('titular')} ? 'campo--erro'">
+                        <label for="titular">Nome impresso no cartão</label>
+                        <input id="titular" type="text" th:field="*{titular}" autocomplete="cc-name">
+                        <span class="campo__erro" th:if="${#fields.hasErrors('titular')}" th:errors="*{titular}">erro</span>
+                    </div>
+
+                    <button type="submit" class="botao botao--etiqueta botao--grande botao--largo">
+                        Finalizar compra
+                    </button>
+                </form>
+
+                <details class="credenciais" open>
+                    <summary>Regras do Banco Tranquilo (ambiente de teste)</summary>
+                    <p>Aprova: cartão <code>4111 1111 1111 1111</code> com qualquer CPF válido.</p>
+                    <p>Recusa: cartão terminado em <code>0000</code>, CPF <code>111.111.111-11</code>
+                        ou total acima de <strong>R$ 5.000,00</strong>.</p>
+                </details>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: cabeca('Não encontrado')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topo('erro')}"></header>
+<main class="conteudo">
+    <div class="envelope recado">
+        <p class="recado__codigo">404</p>
+        <h1>Não achamos isso na feira</h1>
+        <p th:text="${mensagem}">O endereço não existe.</p>
+        <div class="recado__acoes">
+            <a class="botao" th:href="@{/}">Ir para a vitrine</a>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
+</body>
+</html>

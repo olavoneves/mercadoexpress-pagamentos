@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--
+  Fragmentos reaproveitados por todas as paginas (mesma estrutura da Parte I):
+  head, cabecalho com contador do carrinho, avisos e rodape.
+-->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="cabeca(titulo)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0B6B3A">
+    <title th:text="|${titulo} · Mercado Express|">Mercado Express</title>
+    <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75,500;75,600;75,700;75,800&family=Inter:wght@400;500;600&display=swap">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+
+<body>
+
+<!-- ================= Cabecalho =================
+     secao: 'vitrine' | 'carrinho' | 'pedido' | 'gerencia' | 'erro' -->
+<header class="topo" th:fragment="topo(secao)">
+    <div class="envelope topo__barra">
+        <a class="marca" th:href="@{/}">
+            Mercado <span class="marca__express">Express</span>
+            <span class="marca__selo">Feira de bairro</span>
+        </a>
+
+        <nav class="topo__acoes" aria-label="Navegação principal">
+            <a class="topo__link" th:href="@{/}"
+               th:attrappend="aria-current=${secao == 'vitrine'} ? 'page' : null">Vitrine</a>
+            <a class="topo__link" th:href="@{/gerencia}"
+               th:attrappend="aria-current=${secao == 'gerencia'} ? 'page' : null">Gerência</a>
+            <a class="topo__carrinho" th:href="@{/carrinho}"
+               th:attrappend="aria-current=${secao == 'carrinho'} ? 'page' : null">
+                Carrinho
+                <span class="topo__contador" th:text="${qtdCarrinho ?: 0}"
+                      th:classappend="${(qtdCarrinho ?: 0) == 0} ? 'contador-vazio'"
+                      th:attr="aria-label=|${qtdCarrinho ?: 0} itens no carrinho|">0</span>
+            </a>
+        </nav>
+    </div>
+</header>
+
+<!-- ================= Mensagens flash ================= -->
+<div th:fragment="avisos">
+    <p class="aviso" role="status" th:if="${sucesso}" th:text="${sucesso}">Mensagem de sucesso.</p>
+    <p class="aviso aviso--erro" role="alert" th:if="${falha}" th:text="${falha}">Mensagem de erro.</p>
+</div>
+
+<!-- ================= Selo de status da compra ================= -->
+<span th:fragment="seloStatus(status)" class="selo"
+      th:classappend="|selo--${#strings.toLowerCase(status)}|"
+      th:text="${status == 'APROVADO' ? 'Aprovado' : (status == 'RECUSADO' ? 'Recusado' : 'Pendente')}">Aprovado</span>
+
+<!-- ================= Rodape ================= -->
+<footer class="rodape" th:fragment="rodape">
+    <div class="envelope rodape__conteudo">
+        <span>Mercado Express &middot; Checkpoint 5 - Parte II &middot; FIAP TDS</span>
+        <span>Spring Boot, RabbitMQ, PostgreSQL e Thymeleaf</span>
+    </div>
+</footer>
+
+</body>
+</html>
