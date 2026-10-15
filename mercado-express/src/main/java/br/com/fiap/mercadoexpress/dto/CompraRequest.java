@@ -44,8 +44,7 @@ public class CompraRequest {
     private Pagamento pagamento;
 
     @NotEmpty(message = "A compra precisa de pelo menos um item")
-    @Valid
-    private List<Item> itens;
+    private List<@Valid Item> itens;
 
     @Data
     @Builder
