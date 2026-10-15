@@ -1,0 +1,32 @@
+# Banco Tranquilo - API mock da plataforma de pagamentos.
+# Todas as regras podem ser ajustadas por variavel de ambiente.
+spring:
+  application:
+    name: banco-tranquilo-api
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${SERVER_PORT:8082}
+
+banco:
+  # Recusa pagamentos acima deste valor (R$)
+  limite-valor: ${BANCO_LIMITE_VALOR:5000.00}
+  # Recusa cartoes que terminam com este sufixo
+  sufixo-cartao-recusado: ${BANCO_SUFIXO_CARTAO_RECUSADO:0000}
+  # CPFs com restricao cadastral (so digitos, separados por virgula)
+  cpfs-bloqueados: ${BANCO_CPFS_BLOQUEADOS:11111111111,22222222222,12345678909}
+  # Atraso simulado de processamento, para a assincronia ficar visivel
+  atraso-minimo-ms: ${BANCO_ATRASO_MINIMO_MS:500}
+  atraso-maximo-ms: ${BANCO_ATRASO_MAXIMO_MS:1500}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    br.com.fiap.bancotranquilo: INFO
