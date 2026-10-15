@@ -1,0 +1,53 @@
+FIAP - TDS - Checkpoint 5 - Parte II (Microsservicos e Mensageria)
+Mercado Express Pagamentos - CONFIGURACAO DO BANCO DE DADOS
+=====================================================================
+
+SGBD .........: PostgreSQL 16 (imagem postgres:16 do docker-compose.yml)
+Host .........: localhost        (dentro da rede do compose: postgres)
+Porta ........: 5434 no host  ->  5432 no container
+                (5434 para nao conflitar com um PostgreSQL local na 5432;
+                 pode ser trocada com POSTGRES_PORT no arquivo .env)
+Database .....: mercadoexpress
+Usuario ......: mercado
+Senha ........: mercado
+JDBC URL .....: jdbc:postgresql://localhost:5434/mercadoexpress
+Script .......: database/script.sql
+
+Como o banco e criado
+---------------------
+1. docker compose up --build
+   Na primeira subida (volume vazio) o container executa sozinho o
+   database/script.sql, montado em /docker-entrypoint-initdb.d.
+
+2. Manualmente, em qualquer PostgreSQL:
+   psql -h localhost -p 5434 -U mercado -d mercadoexpress -f database/script.sql
+
+3. Recriar do zero:
+   docker compose down -v && docker compose up --build
+
+O script e idempotente (DROP TABLE IF EXISTS antes de criar) e contem:
+  - DDL com PK, FK, CHECK, indices e comentarios;
+  - 16 produtos (preco de venda e de custo);
+  - 42 compras historicas nos ultimos 30 dias (34 aprovadas, 8 recusadas);
+  - 98 itens de compra;
+  - 42 registros de e-mail (2 com FALHA de SMTP, para exemplo).
+
+Tabelas
+-------
+TDS_PRODUTOS_MERCADO      produtos (entidade da Parte I + PRECO_CUSTO e ESTOQUE_MINIMO)
+TDS_COMPRAS_MERCADO       compras e status do pagamento (PENDENTE/APROVADO/RECUSADO)
+TDS_ITENS_COMPRA_MERCADO  itens de cada compra, com preco e custo congelados
+TDS_EMAILS_MERCADO        controle de e-mails: destinatario, assunto, compra_id,
+                          status (ENVIADO/FALHA), erro, data_envio
+
+Configuracao na aplicacao (mercado-express/src/main/resources/application.yml)
+-----------------------------------------------------------------------------
+spring.datasource.url      = ${DB_URL:jdbc:postgresql://localhost:5434/mercadoexpress}
+spring.datasource.username = ${DB_USER:mercado}
+spring.datasource.password = ${DB_PASSWORD:mercado}
+spring.jpa.hibernate.ddl-auto = validate   (o schema vem do script, nao do Hibernate)
+
+No docker compose o servico mercado-express recebe:
+DB_URL=jdbc:postgresql://postgres:5432/mercadoexpress  DB_USER=mercado  DB_PASSWORD=mercado
+
+Credenciais de ambiente LOCAL e descartavel, usadas apenas para a avaliacao.
