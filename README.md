@@ -139,6 +139,8 @@ sequenceDiagram
 
 A tela `/pedidos/{id}` mostra esse caminho ao vivo: enquanto a compra está
 PENDENTE, ela consulta a API a cada segundo e se atualiza quando o banco responde.
+Na loja: [pendente (07)](docs/07-pedido-pendente.png) →
+[recusado (08)](docs/08-pedido-recusado.png) e [aprovado (10)](docs/10-pedido-aprovado.png).
 
 ---
 
@@ -165,6 +167,9 @@ importado pelos dois serviços que usam o broker. Os nomes são constantes em
 
 Todas as mensagens são JSON (conversor Jackson), **persistentes**
 (`delivery_mode=2`) e levam **`correlationId` = id da compra**.
+No painel: [exchanges (02)](docs/02-rabbitmq-exchanges.png),
+[filas (03)](docs/03-rabbitmq-filas.png) e uma
+[mensagem com essas propriedades (04)](docs/04-rabbitmq-mensagem-na-fila.png).
 
 ---
 
@@ -314,6 +319,12 @@ compra recusada** (cartão, CPF e valor), validação 400 e **chamar o banco
 direto** (aprovado, recusado e regras). Cada POST de compra guarda o id em
 `{{compraId}}` para a consulta seguinte.
 
+Prints: [compra aprovada (11)](docs/11-postman-compra-aprovada.png),
+[status aprovada (12)](docs/12-postman-status-aprovada.png),
+[compra recusada (13)](docs/13-postman-compra-recusada.png),
+[status recusada (14)](docs/14-postman-status-recusada.png) e
+[banco direto (15)](docs/15-postman-banco-direto.png).
+
 ---
 
 ## JSON de exemplo
@@ -450,6 +461,9 @@ As cores foram checadas para daltonismo: verde × vermelho reprovou no
 validador, então "recusado" usa laranja e o vermelho fica só para o alerta de
 estoque, sempre com ícone e texto.
 
+Prints: [indicadores e séries (19)](docs/19-dashboard-indicadores.png) e
+[produtos, pagamentos e estoque (20)](docs/20-dashboard-graficos.png).
+
 ---
 
 ## Controle de e-mails
@@ -467,6 +481,10 @@ estoque, sempre com ícone e texto.
 SELECT ID, DESTINATARIO, ASSUNTO, COMPRA_ID, STATUS, ERRO, DATA_ENVIO
   FROM TDS_EMAILS_MERCADO ORDER BY DATA_ENVIO DESC;
 ```
+
+Prints: [e-mail aprovado (16)](docs/16-email-mailpit-aprovado.png),
+[e-mail recusado (17)](docs/17-email-mailpit-recusado.png) e
+[tabela no PostgreSQL (18)](docs/18-tabela-emails-postgres.png).
 
 ### Trocar o Mailpit por Gmail (e-mail real)
 
@@ -513,6 +531,15 @@ docker compose logs -f pagamento-integracao
 docker compose start banco-tranquilo-api
 ```
 
+Resultado no painel: [print 22](docs/22-rabbitmq-dlq.png), mensagem na DLQ com
+`x-death` (`reason: rejected`, fila de origem `pagamento.solicitado`).
+
+**Ver uma mensagem parada na fila:** pare o consumidor com
+`docker compose stop pagamento-integracao`, faça uma compra e use *Get
+messages* em `pagamento.solicitado` com *Ack mode: Nack message requeue true*
+([print 04](docs/04-rabbitmq-mensagem-na-fila.png)). Depois,
+`docker compose start pagamento-integracao` processa o que ficou na fila.
+
 Para reprocessar, abra a mensagem no painel (Queues → `pagamento.solicitado.dlq`
 → *Get messages*), copie o payload e publique de novo como em
 [Teste pelo painel do RabbitMQ](#teste-pelo-painel-do-rabbitmq).
@@ -537,8 +564,8 @@ Martins, 3× Sabão em pó = R$ 74,70, sem e-mail enviado) só para este teste.
 |---|---|
 | Routing key | `pagamento.solicitado` |
 | Headers | *(nenhum; o `__TypeId__` não é necessário)* |
-| Properties | `content_type` = `application/json` |
-| Delivery mode | `2 - Persistent` |
+| Properties | `content_type` = `application/json` *(obrigatória)* |
+| Properties *(opcional)* | `delivery_mode` = `2`, para a mensagem ser persistente |
 | Payload | o JSON abaixo |
 
 ```json
@@ -583,8 +610,7 @@ usa `alwaysConvertToInferredType`, ou seja, o tipo vem do parâmetro do
 `content_type=application/json`; sem ele, o corpo chega como bytes e o
 listener rejeita a mensagem.
 
-<!-- [SUBSTITUIR] Painel RabbitMQ > Exchanges > mercado.pagamentos > Publish message preenchido (routing key, content_type, payload) e a confirmação "Message published" -->
-![Publish manual no painel do RabbitMQ](docs/18-rabbitmq-publish-manual.png)
+![Publish manual no painel do RabbitMQ](docs/21-rabbitmq-publish-manual.png)
 
 ---
 
@@ -619,7 +645,7 @@ mercadoexpress-pagamentos/
 ├── database/script.sql          # DDL + massa de dados
 ├── postman/MercadoExpress.postman_collection.json
 ├── scripts/teste-fluxo.sh
-├── docs/                        # prints
+├── docs/                        # prints 01-23 (seção Prints)
 ├── mercado-commons/             # eventos, RabbitNomes, RabbitTopologiaConfig
 ├── banco-tranquilo-api/         # API mock (Initializr)
 ├── pagamento-integracao/        # consumidor + RestClient + retry/DLQ (Initializr)
@@ -633,56 +659,145 @@ mercadoexpress-pagamentos/
 
 ## Prints
 
-<!-- [SUBSTITUIR] Terminal com `docker compose ps` mostrando os 6 containers Up/healthy -->
+Capturas de uma execução real com `docker compose up --build` (16/10/2026), na
+ordem da demonstração. Os números de pedido citados são os que aparecem nas imagens.
+
+### 1. Infraestrutura
+
+**01 · Containers no ar.** `docker compose ps` com os seis serviços: os três
+Spring Boot em 18080/18081/18082, mais PostgreSQL (5434), RabbitMQ (5672/15672)
+e Mailpit (1025/8025), com healthcheck *healthy*.
+
 ![Containers no ar](docs/01-containers-no-ar.png)
 
-<!-- [SUBSTITUIR] Painel RabbitMQ (localhost:15672) > Exchanges, com mercado.pagamentos e mercado.pagamentos.dlx -->
+**02 · Exchanges.** `mercado.pagamentos` e `mercado.pagamentos.dlx`, ambas
+*topic* e duráveis (D), declaradas pelos `Declarables` do `mercado-commons`.
+
 ![RabbitMQ - exchanges](docs/02-rabbitmq-exchanges.png)
 
-<!-- [SUBSTITUIR] Painel RabbitMQ > Queues, com as 4 filas (pagamento.solicitado, pagamento.processado e as duas DLQs) e o gráfico de mensagens -->
+**03 · Filas.** As quatro filas duráveis: `pagamento.solicitado` e
+`pagamento.processado` com DLX/DLK, mais as duas DLQs.
+
 ![RabbitMQ - filas](docs/03-rabbitmq-filas.png)
 
-<!-- [SUBSTITUIR] Painel RabbitMQ > Exchanges > mercado.pagamentos > Bindings, ou uma mensagem aberta mostrando correlation_id e delivery_mode 2 -->
-![RabbitMQ - bindings e mensagem](docs/04-rabbitmq-mensagens.png)
+**04 · Mensagem na fila.** Mensagem do pedido #43 parada em
+`pagamento.solicitado`, lida com *Get messages* (requeue true): `correlation_id`
+= id da compra, `delivery_mode: 2` (persistente), `content_type:
+application/json` e o header `__TypeId__` que o RabbitTemplate coloca. Para a
+mensagem ficar visível na fila, o consumidor foi parado antes com
+`docker compose stop pagamento-integracao`.
 
-<!-- [SUBSTITUIR] Vitrine em localhost:18080 com o contador do carrinho preenchido -->
+![RabbitMQ - mensagem na fila](docs/04-rabbitmq-mensagem-na-fila.png)
+
+### 2. Loja: vitrine, carrinho e pedido
+
+**05 · Vitrine** em http://localhost:18080, com filtro por setor, etiqueta de
+preço e estoque de cada produto.
+
 ![Vitrine](docs/05-vitrine.png)
 
-<!-- [SUBSTITUIR] Carrinho com 2+ itens, total na etiqueta e formulário de finalização preenchido -->
+**06 · Carrinho** com três itens (R$ 58,39) e o formulário de finalização.
+
 ![Carrinho](docs/06-carrinho.png)
 
-<!-- [SUBSTITUIR] Tela /pedidos/{id} logo após finalizar: status PENDENTE com o cronômetro -->
-![Finalização - pendente](docs/07-finalizacao-pendente.png)
+**07 · Pedido #43 PENDENTE.** Logo depois de finalizar, a compra já está
+gravada e publicada; a tela consulta a API a cada segundo e o cronômetro mostra
+a espera pelo banco (consumidor parado, como no print 04).
 
-<!-- [SUBSTITUIR] A mesma tela segundos depois: APROVADO, código BT e linha do tempo completa com o e-mail -->
-![Finalização - aprovado](docs/08-finalizacao-aprovado.png)
+![Pedido pendente](docs/07-pedido-pendente.png)
 
-<!-- [SUBSTITUIR] Postman: "2. Criar compra APROVADA" com a resposta 202 Accepted e status PENDENTE -->
-![Postman - compra aprovada](docs/09-postman-compra-aprovada.png)
+**08 · Pedido #43 RECUSADO.** Com o consumidor religado, o Banco Tranquilo
+recusou pela regra do CPF bloqueado (`111.111.111-11`): "CPF com restrição
+cadastral". A linha do tempo fecha com o e-mail enviado.
 
-<!-- [SUBSTITUIR] Postman: "3. Consultar status" mostrando APROVADO e o e-mail ENVIADO -->
-![Postman - consulta de status](docs/10-postman-consulta-status.png)
+![Pedido recusado](docs/08-pedido-recusado.png)
 
-<!-- [SUBSTITUIR] Postman: compra recusada (cartão 0000) e a consulta mostrando RECUSADO e o motivo -->
-![Postman - compra recusada](docs/11-postman-compra-recusada.png)
+**09 · Novo carrinho** (R$ 17,75) com o cartão de teste `4111…1111` e um CPF
+fora da lista de bloqueio.
 
-<!-- [SUBSTITUIR] Postman: "8. Banco Tranquilo direto" com a resposta do mock -->
-![Postman - banco direto](docs/12-postman-banco-direto.png)
+![Carrinho - finalização](docs/09-carrinho-checkout.png)
 
-<!-- [SUBSTITUIR] Mailpit (localhost:8025) com o e-mail "Pedido #N aprovado" aberto -->
-![E-mail no Mailpit](docs/13-email-mailpit.png)
+**10 · Pedido #44 APROVADO** com código de autorização `BT087591`, estoque
+baixado e e-mail enviado.
 
-<!-- [SUBSTITUIR] Consulta SELECT * FROM TDS_EMAILS_MERCADO no IntelliJ/DBeaver/psql, com ENVIADO e FALHA -->
-![Tabela de e-mails no Postgres](docs/14-tabela-emails-postgres.png)
+![Pedido aprovado](docs/10-pedido-aprovado.png)
 
-<!-- [SUBSTITUIR] Dashboard /gerencia completo (KPIs + gráficos) -->
-![Dashboard de gerência](docs/15-dashboard-gerencia.png)
+### 3. API REST no Postman
 
-<!-- [SUBSTITUIR] Logs do pagamento-integracao com as tentativas + fila pagamento.solicitado.dlq com 1 mensagem no painel -->
-![DLQ](docs/16-dlq.png)
+**11 · Criar compra aprovada.** `POST {{mercadoUrl}}/api/compras` responde
+**202 Accepted** com a compra #45 em `PENDENTE` (testes do Postman 2/2).
 
-<!-- [SUBSTITUIR] Saída do ./scripts/teste-fluxo.sh -->
-![Script de teste](docs/17-script-teste-fluxo.png)
+![Postman - compra aprovada](docs/11-postman-compra-aprovada.png)
+
+**12 · Consultar status.** `GET /api/compras/45` já devolve `APROVADO`: o
+resultado veio pelo RabbitMQ entre as duas chamadas.
+
+![Postman - status aprovada](docs/12-postman-status-aprovada.png)
+
+**13 · Criar compra recusada.** Cartão `5555 4444 3333 0000`: 202 com a #46 em
+`PENDENTE`.
+
+![Postman - compra recusada](docs/13-postman-compra-recusada.png)
+
+**14 · Status da recusada.** `GET /api/compras/46` mostra `RECUSADO`, motivo
+"Cartão recusado pelo emissor" e `codigoAutorizacao: null`.
+
+![Postman - status recusada](docs/14-postman-status-recusada.png)
+
+**15 · Banco Tranquilo direto.** `POST {{bancoUrl}}/api/pagamentos`, sem
+RabbitMQ: resposta síncrona `APROVADO` (975 ms, por causa do atraso simulado).
+
+![Postman - banco direto](docs/15-postman-banco-direto.png)
+
+### 4. E-mails
+
+**16 · E-mail de aprovação no Mailpit** (pedido #44): template HTML com a
+identidade da loja, itens, cartão e autorização.
+
+![E-mail aprovado](docs/16-email-mailpit-aprovado.png)
+
+**17 · E-mail de recusa** (pedido #43) com o motivo informado pelo banco.
+
+![E-mail recusado](docs/17-email-mailpit-recusado.png)
+
+**18 · Controle de e-mails no PostgreSQL.** `SELECT * FROM tds_emails_mercado`:
+destinatário, assunto, `compra_id`, status `ENVIADO` e data de cada envio,
+incluindo os pedidos #43 a #46 acima.
+
+![Tabela de e-mails](docs/18-tabela-emails-postgres.png)
+
+### 5. Dashboard de gerência
+
+**19 · Indicadores e séries.** KPIs dos últimos 30 dias, vendas por dia
+(aprovados × recusados) e faturamento × lucro.
+
+![Dashboard - indicadores](docs/19-dashboard-indicadores.png)
+
+**20 · Produtos, pagamentos e estoque.** Top produtos, status dos pagamentos,
+estoque com o alerta dos três itens abaixo do mínimo, últimos e-mails e
+compras recentes.
+
+![Dashboard - gráficos](docs/20-dashboard-graficos.png)
+
+### 6. Testes internos de mensageria
+
+**21 · Publish manual no painel do RabbitMQ.** Solicitação da compra #42
+publicada à mão na exchange `mercado.pagamentos`, só com `content_type`, sem
+headers. O painel confirma *Message published*. Passo a passo em
+[Teste pelo painel do RabbitMQ](#teste-pelo-painel-do-rabbitmq).
+
+![Publish manual](docs/21-rabbitmq-publish-manual.png)
+
+**22 · DLQ.** Com o `banco-tranquilo-api` parado, a compra #47 esgotou as
+tentativas e caiu em `pagamento.solicitado.dlq` pela `mercado.pagamentos.dlx`.
+Os headers `x-death` mostram `reason: rejected` e a fila de origem.
+
+![DLQ](docs/22-rabbitmq-dlq.png)
+
+**23 · Script de teste.** `bash scripts/teste-fluxo.sh`: aprovada (#48), as três
+recusas (#49 cartão, #50 CPF, #51 valor), banco direto e validação 400.
+
+![Script de teste](docs/23-script-teste-fluxo.png)
 
 ---
 
