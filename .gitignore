@@ -18,3 +18,7 @@ Thumbs.db
 
 ### VS Code ###
 .vscode/
+
+### Sincronizacao local do app Postman (a colecao versionada e o .json) ###
+postman/.postman/
+postman/postman/
