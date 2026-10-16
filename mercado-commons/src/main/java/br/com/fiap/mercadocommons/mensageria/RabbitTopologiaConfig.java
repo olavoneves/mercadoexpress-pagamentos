@@ -64,9 +64,16 @@ public class RabbitTopologiaConfig {
      * <p>No Spring AMQP 4 (Spring Boot 4) o Jackson2JsonMessageConverter foi
      * sucedido por este JacksonJsonMessageConverter, que usa o Jackson 3 do
      * Boot. O formato e o mesmo: corpo JSON + header __TypeId__.</p>
+     *
+     * <p>O tipo de destino vem SEMPRE do parametro do @RabbitListener, nao do
+     * header __TypeId__. Assim uma mensagem publicada a mao pelo painel do
+     * RabbitMQ (Publish message, so com content_type=application/json) e
+     * desserializada igual a uma publicada pelo RabbitTemplate.</p>
      */
     @Bean
     public MessageConverter conversorJson() {
-        return new JacksonJsonMessageConverter(PACOTE_EVENTOS);
+        JacksonJsonMessageConverter conversor = new JacksonJsonMessageConverter(PACOTE_EVENTOS);
+        conversor.setAlwaysConvertToInferredType(true);
+        return conversor;
     }
 }
