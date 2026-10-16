@@ -173,8 +173,9 @@ INSERT INTO TDS_PRODUTOS_MERCADO (ID, NOME, TIPO, SETOR, TAMANHO, PRECO_VENDA, P
 
 -- ---------------------------------------------------------------------
 -- 7) MASSA DE DADOS - 42 compras historicas nos ultimos 30 dias
---    34 aprovadas e 8 recusadas (cartao final 0000, CPF bloqueado
---    e valor acima de R$ 5.000), exatamente as regras do Banco Tranquilo.
+--    33 aprovadas, 8 recusadas (cartao final 0000, CPF bloqueado
+--    e valor acima de R$ 5.000) e 1 PENDENTE: a compra #42 fica reservada para o
+--    teste de Publish message manual pelo painel do RabbitMQ (README).
 -- ---------------------------------------------------------------------
 INSERT INTO TDS_COMPRAS_MERCADO (ID, CLIENTE_NOME, CLIENTE_EMAIL, CLIENTE_CPF, CARTAO_FINAL, VALOR_TOTAL, CUSTO_TOTAL, STATUS, ORIGEM, CODIGO_AUTORIZACAO, MOTIVO, DATA_CRIACAO, DATA_ATUALIZACAO) VALUES
 (1, 'Carla Mendes', 'carla.mendes@exemplo.com', '211.939.388-56', '4533', 173.41, 110.80, 'APROVADO', 'API', 'BT789713', 'Pagamento aprovado pelo Banco Tranquilo', (CURRENT_DATE - 29) + TIME '17:45:25', (CURRENT_DATE - 29) + TIME '17:45:25' + INTERVAL '2 seconds'),
@@ -218,7 +219,7 @@ INSERT INTO TDS_COMPRAS_MERCADO (ID, CLIENTE_NOME, CLIENTE_EMAIL, CLIENTE_CPF, C
 (39, 'Bruno Lima', 'bruno.lima@exemplo.com', '944.928.803-80', '0000', 140.15, 72.60, 'RECUSADO', 'API', NULL, 'Cartão recusado pelo emissor', (CURRENT_DATE - 4) + TIME '15:25:00', (CURRENT_DATE - 4) + TIME '15:25:00' + INTERVAL '2 seconds'),
 (40, 'Marcos Vieira', 'marcos.vieira@exemplo.com', '675.103.308-74', '8027', 253.49, 162.65, 'APROVADO', 'LOJA', 'BT966398', 'Pagamento aprovado pelo Banco Tranquilo', (CURRENT_DATE - 2) + TIME '17:59:28', (CURRENT_DATE - 2) + TIME '17:59:28' + INTERVAL '2 seconds'),
 (41, 'Ana Souza', 'ana.souza@exemplo.com', '351.788.130-90', '3405', 593.50, 391.60, 'APROVADO', 'LOJA', 'BT161708', 'Pagamento aprovado pelo Banco Tranquilo', (CURRENT_DATE - 2) + TIME '09:00:19', (CURRENT_DATE - 2) + TIME '09:00:19' + INTERVAL '2 seconds'),
-(42, 'João Pedro Martins', 'joao.martins@exemplo.com', '389.185.936-86', '3899', 74.70, 47.40, 'APROVADO', 'LOJA', 'BT801368', 'Pagamento aprovado pelo Banco Tranquilo', (CURRENT_DATE - 2) + TIME '09:24:26', (CURRENT_DATE - 2) + TIME '09:24:26' + INTERVAL '2 seconds');
+(42, 'João Pedro Martins', 'joao.martins@exemplo.com', '389.185.936-86', '1111', 74.70, 47.40, 'PENDENTE', 'LOJA', NULL, NULL, (CURRENT_DATE - 2) + TIME '09:24:26', (CURRENT_DATE - 2) + TIME '09:24:26' + INTERVAL '2 seconds');
 
 INSERT INTO TDS_ITENS_COMPRA_MERCADO (ID, COMPRA_ID, PRODUTO_ID, QUANTIDADE, PRECO_UNITARIO, CUSTO_UNITARIO, SUBTOTAL) VALUES
 (1, 1, 9, 3, 3.25, 1.10, 9.75),
@@ -364,8 +365,7 @@ INSERT INTO TDS_EMAILS_MERCADO (DESTINATARIO, ASSUNTO, COMPRA_ID, STATUS, ERRO, 
 ('ana.souza@exemplo.com', 'Pedido #38 aprovado | Mercado Express', 38, 'ENVIADO', NULL, (CURRENT_DATE - 4) + TIME '09:13:53' + INTERVAL '3 seconds'),
 ('bruno.lima@exemplo.com', 'Pedido #39 não aprovado | Mercado Express', 39, 'ENVIADO', NULL, (CURRENT_DATE - 4) + TIME '15:25:00' + INTERVAL '3 seconds'),
 ('marcos.vieira@exemplo.com', 'Pedido #40 aprovado | Mercado Express', 40, 'ENVIADO', NULL, (CURRENT_DATE - 2) + TIME '17:59:28' + INTERVAL '3 seconds'),
-('ana.souza@exemplo.com', 'Pedido #41 aprovado | Mercado Express', 41, 'ENVIADO', NULL, (CURRENT_DATE - 2) + TIME '09:00:19' + INTERVAL '3 seconds'),
-('joao.martins@exemplo.com', 'Pedido #42 aprovado | Mercado Express', 42, 'ENVIADO', NULL, (CURRENT_DATE - 2) + TIME '09:24:26' + INTERVAL '3 seconds');
+('ana.souza@exemplo.com', 'Pedido #41 aprovado | Mercado Express', 41, 'ENVIADO', NULL, (CURRENT_DATE - 2) + TIME '09:00:19' + INTERVAL '3 seconds');
 
 -- Os IDs acima foram informados explicitamente; acerta as sequences para
 -- que as proximas compras feitas pela aplicacao continuem a numeracao.
