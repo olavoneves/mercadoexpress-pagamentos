@@ -32,11 +32,12 @@ Esse comando sobe tudo do zero: PostgreSQL, RabbitMQ, Mailpit e os três serviç
 10. [Dashboard de gerência](#dashboard-de-gerência)
 11. [Controle de e-mails](#controle-de-e-mails)
 12. [Resiliência: retry, DLQ e idempotência](#resiliência-retry-dlq-e-idempotência)
-13. [Testes](#testes)
-14. [Estrutura do repositório](#estrutura-do-repositório)
-15. [Prints](#prints)
-16. [Decisões técnicas](#decisões-técnicas)
-17. [Integrantes](#integrantes)
+13. [Teste pelo painel do RabbitMQ](#teste-pelo-painel-do-rabbitmq)
+14. [Testes](#testes)
+15. [Estrutura do repositório](#estrutura-do-repositório)
+16. [Prints](#prints)
+17. [Decisões técnicas](#decisões-técnicas)
+18. [Integrantes](#integrantes)
 
 ---
 
@@ -50,7 +51,7 @@ pelo mesmo broker.
 flowchart LR
     cliente([Cliente<br/>navegador ou Postman])
 
-    subgraph ME["mercado-express :8080<br/>Front End + Back End"]
+    subgraph ME["mercado-express :18080<br/>Front End + Back End"]
         loja[Vitrine e carrinho<br/>Thymeleaf]
         api[API REST<br/>/api/compras]
         ger[Dashboard<br/>/gerencia]
@@ -64,11 +65,11 @@ flowchart LR
         dlq[(pagamento.solicitado.dlq)]
     end
 
-    subgraph PI["pagamento-integracao :8081<br/>Integração Pagamentos"]
+    subgraph PI["pagamento-integracao :18081<br/>Integração Pagamentos"]
         cons[Consumidor<br/>+ retry com backoff]
     end
 
-    subgraph BT["banco-tranquilo-api :8082<br/>API Plataforma de Pagamentos"]
+    subgraph BT["banco-tranquilo-api :18082<br/>API Plataforma de Pagamentos"]
         banco[POST /api/pagamentos<br/>mock com regras]
     end
 
@@ -91,9 +92,9 @@ flowchart LR
 
 | Serviço | Porta | Papel |
 |---|---|---|
-| `mercado-express` | 8080 | Vitrine, carrinho, API de compras, consumidor do resultado, e-mail e dashboard |
-| `pagamento-integracao` | 8081 | Consome `pagamento.solicitado`, chama o banco e publica `pagamento.processado` |
-| `banco-tranquilo-api` | 8082 | API mock da plataforma de pagamentos |
+| `mercado-express` | 18080 | Vitrine, carrinho, API de compras, consumidor do resultado, e-mail e dashboard |
+| `pagamento-integracao` | 18081 | Consome `pagamento.solicitado`, chama o banco e publica `pagamento.processado` |
+| `banco-tranquilo-api` | 18082 | API mock da plataforma de pagamentos |
 | `mercado-commons` | — | Biblioteca: eventos, nomes das filas e topologia (`Declarables`) |
 | PostgreSQL 16 | 5434 → 5432 | Banco do mercado |
 | RabbitMQ 3 management | 5672 / 15672 | Broker e painel (`guest` / `guest`) |
@@ -172,7 +173,7 @@ Todas as mensagens são JSON (conversor Jackson), **persistentes**
 Regras determinísticas, avaliadas nesta ordem, para demonstrar os dois casos
 sem sorte. Todas podem ser trocadas por variável de ambiente
 (`banco-tranquilo-api/src/main/resources/application.yml`) e consultadas em
-`GET http://localhost:8082/api/pagamentos/regras`.
+`GET http://localhost:18082/api/pagamentos/regras`.
 
 | # | Condição | Resultado | Motivo devolvido |
 |---|---|---|---|
@@ -246,14 +247,18 @@ docker compose up --build
 
 | O quê | Endereço |
 |---|---|
-| Loja (vitrine e carrinho) | http://localhost:8080 |
-| Dashboard de gerência | http://localhost:8080/gerencia |
-| API de compras | http://localhost:8080/api/compras |
-| pagamento-integracao (health) | http://localhost:8081/actuator/health |
-| Banco Tranquilo | http://localhost:8082/api/pagamentos/regras |
+| Loja (vitrine e carrinho) | http://localhost:18080 |
+| Dashboard de gerência | http://localhost:18080/gerencia |
+| API de compras | http://localhost:18080/api/compras |
+| pagamento-integracao (health) | http://localhost:18081/actuator/health |
+| Banco Tranquilo | http://localhost:18082/api/pagamentos/regras |
 | Painel do RabbitMQ | http://localhost:15672 (`guest` / `guest`) |
 | Mailpit (e-mails) | http://localhost:8025 |
 | PostgreSQL | `localhost:5434` (`mercado` / `mercado`) |
+
+Os serviços usam **18080, 18081 e 18082**, e não as portas padrão do Spring Boot,
+para não colidir com outros projetos que costumam ocupá-las. A porta é a mesma dentro e fora do
+container, em todos os `application.yml`, no compose, no Postman e no script.
 
 Para recomeçar do zero (o volume do banco é apagado e o `script.sql` roda de novo):
 
@@ -262,7 +267,7 @@ docker compose down -v && docker compose up --build
 ```
 
 **Porta ocupada?** Todas as portas do host podem ser trocadas num `.env` na
-raiz (modelo em [`.env.example`](.env.example)), por exemplo `MERCADO_PORT=18080`.
+raiz (modelo em [`.env.example`](.env.example)), por exemplo `MERCADO_PORT=28080`.
 
 ### Pelo IntelliJ (serviços fora do Docker)
 
@@ -278,7 +283,7 @@ e `MercadoExpressApplication`. Os `application.yml` já apontam para `localhost`
 
 ## Endpoints
 
-### mercado-express (8080)
+### mercado-express (18080)
 
 | Método | Caminho | Descrição |
 |---|---|---|
@@ -294,7 +299,7 @@ e `MercadoExpressApplication`. Os `application.yml` já apontam para `localhost`
 Erros da API seguem o formato ProblemDetail: **400** (validação, com
 `campos`), **422** (produto inexistente ou sem estoque) e **404**.
 
-### banco-tranquilo-api (8082)
+### banco-tranquilo-api (18082)
 
 | Método | Caminho | Descrição |
 |---|---|---|
@@ -313,7 +318,7 @@ direto** (aprovado, recusado e regras). Cada POST de compra guarda o id em
 
 ## JSON de exemplo
 
-`POST http://localhost:8080/api/compras`
+`POST http://localhost:18080/api/compras`
 
 ```json
 {
@@ -375,7 +380,7 @@ Cerca de 1–2 s depois, `GET /api/compras/43`:
 Com `curl`:
 
 ```bash
-curl -i -X POST http://localhost:8080/api/compras \
+curl -i -X POST http://localhost:18080/api/compras \
   -H "Content-Type: application/json" \
   -d '{"cliente":{"nome":"Ana Souza","email":"ana.souza@exemplo.com","cpf":"529.982.247-25"},"pagamento":{"numeroCartao":"4111 1111 1111 1111","titular":"ANA SOUZA"},"itens":[{"produtoId":1,"quantidade":3}]}'
 ```
@@ -409,12 +414,13 @@ Ele é idempotente (faz `DROP` antes) e cria:
 | Tabela | Conteúdo |
 |---|---|
 | `TDS_PRODUTOS_MERCADO` | Produto da Parte I + `PRECO_VENDA`, `PRECO_CUSTO` e `ESTOQUE_MINIMO` · 16 produtos |
-| `TDS_COMPRAS_MERCADO` | Compra, status, cartão (só o final), totais de venda e custo · 42 compras históricas |
+| `TDS_COMPRAS_MERCADO` | Compra, status, cartão (só o final), totais de venda e custo · 42 compras históricas (1 PENDENTE) |
 | `TDS_ITENS_COMPRA_MERCADO` | Itens com preço e custo congelados na compra · 98 itens |
-| `TDS_EMAILS_MERCADO` | Controle de e-mails (destinatário, assunto, compra, status, erro, data) · 42 registros |
+| `TDS_EMAILS_MERCADO` | Controle de e-mails (destinatário, assunto, compra, status, erro, data) · 41 registros |
 
-As 42 compras históricas (34 aprovadas e 8 recusadas pelas três regras do
-banco) usam datas relativas (`CURRENT_DATE - n`). Assim o dashboard mostra
+As 42 compras históricas (33 aprovadas, 8 recusadas pelas três regras do
+banco e a **#42 PENDENTE**, reservada para o
+[teste pelo painel do RabbitMQ](#teste-pelo-painel-do-rabbitmq)) usam datas relativas (`CURRENT_DATE - n`). Assim o dashboard mostra
 os últimos 30 dias preenchidos em qualquer dia em que o script rodar. Três
 produtos ficam abaixo do estoque mínimo de propósito, para o alerta aparecer.
 
@@ -426,7 +432,7 @@ ambiente (`DB_URL`, `DB_USER`, `DB_PASSWORD`).
 
 ## Dashboard de gerência
 
-`http://localhost:8080/gerencia` (filtro de 7, 15 ou 30 dias), com Chart.js:
+`http://localhost:18080/gerencia` (filtro de 7, 15 ou 30 dias), com Chart.js:
 
 - **KPIs:** faturamento, lucro bruto e margem, ticket médio, pedidos aprovados
   (com taxa de aprovação) e recusados (com pendentes no momento);
@@ -508,15 +514,84 @@ docker compose start banco-tranquilo-api
 ```
 
 Para reprocessar, abra a mensagem no painel (Queues → `pagamento.solicitado.dlq`
-→ *Get messages*) e publique de novo na exchange `mercado.pagamentos` com a
-routing key `pagamento.solicitado`.
+→ *Get messages*), copie o payload e publique de novo como em
+[Teste pelo painel do RabbitMQ](#teste-pelo-painel-do-rabbitmq).
+
+---
+
+## Teste pelo painel do RabbitMQ
+
+Teste interno pedido no enunciado: uma solicitação de pagamento publicada **à
+mão** no painel do RabbitMQ, sem passar pelo mercado-express. O
+`pagamento-integracao` consome, chama o banco e publica o resultado, e o
+mercado atualiza a compra.
+
+O `database/script.sql` já deixa a **compra #42 como PENDENTE** (João Pedro
+Martins, 3× Sabão em pó = R$ 74,70, sem e-mail enviado) só para este teste.
+
+1. Abra http://localhost:15672 (`guest` / `guest`) → **Exchanges** →
+   **`mercado.pagamentos`** → seção **Publish message**.
+2. Preencha:
+
+| Campo da tela | Valor |
+|---|---|
+| Routing key | `pagamento.solicitado` |
+| Headers | *(nenhum; o `__TypeId__` não é necessário)* |
+| Properties | `content_type` = `application/json` |
+| Delivery mode | `2 - Persistent` |
+| Payload | o JSON abaixo |
+
+```json
+{
+  "compraId": 42,
+  "valor": 74.70,
+  "clienteNome": "João Pedro Martins",
+  "clienteEmail": "joao.martins@exemplo.com",
+  "clienteCpf": "389.185.936-86",
+  "numeroCartao": "4111111111111111",
+  "titularCartao": "JOAO PEDRO MARTINS"
+}
+```
+
+3. Clique em **Publish message**. O painel mostra *Message published*.
+
+**Resultado esperado (1–2 s depois)**
+
+| Onde olhar | O que aparece |
+|---|---|
+| `docker compose logs pagamento-integracao` | `Compra 42: solicitando R$ 74.70 ao Banco Tranquilo` e `Compra 42: APROVADO publicado em pagamento.processado` |
+| `docker compose logs mercado-express` | `Compra 42: resultado APROVADO recebido (correlationId=42)` |
+| http://localhost:18080/api/compras/42 | `"status": "APROVADO"`, `codigoAutorizacao` `BTnnnnnn` e o e-mail `ENVIADO` |
+| http://localhost:18080/pedidos/42 | linha do tempo completa |
+| http://localhost:8025 | e-mail "Pedido #42 aprovado" |
+| Estoque do Sabão em pó (id 11) | 48 → 45 |
+
+**Variações**
+
+- **Recusa pelo painel:** use o `compraId` e o `valor` de uma compra que ficou
+  PENDENTE (por exemplo a do teste da DLQ) e troque `numeroCartao` para
+  `5555444433330000`. O resultado é RECUSADO com "Cartão recusado pelo emissor".
+- **Idempotência:** publique o mesmo payload da #42 de novo. O integração
+  chama o banco outra vez, mas o mercado registra
+  `Compra 42: ja esta APROVADO, resultado ... ignorado (idempotencia)`: o
+  status não muda, o estoque não baixa de novo e nenhum e-mail sai.
+
+**Por que funciona sem `__TypeId__`:** o conversor JSON
+([`RabbitTopologiaConfig`](mercado-commons/src/main/java/br/com/fiap/mercadocommons/mensageria/RabbitTopologiaConfig.java))
+usa `alwaysConvertToInferredType`, ou seja, o tipo vem do parâmetro do
+`@RabbitListener` (`PagamentoSolicitadoEvent`), e não do header. Basta o
+`content_type=application/json`; sem ele, o corpo chega como bytes e o
+listener rejeita a mensagem.
+
+<!-- [SUBSTITUIR] Painel RabbitMQ > Exchanges > mercado.pagamentos > Publish message preenchido (routing key, content_type, payload) e a confirmação "Message published" -->
+![Publish manual no painel do RabbitMQ](docs/18-rabbitmq-publish-manual.png)
 
 ---
 
 ## Testes
 
 ```bash
-./mvnw clean package                  # 4 módulos, 24 testes automatizados
+./mvnw clean package                  # 4 módulos, 26 testes automatizados
 ./scripts/teste-fluxo.sh              # ponta a ponta via curl com o compose no ar
 ./scripts/teste-fluxo.sh --dlq        # + derruba o banco e mostra retry -> DLQ
 ```
@@ -524,7 +599,7 @@ routing key `pagamento.solicitado`.
 | Módulo | O que os testes cobrem |
 |---|---|
 | `banco-tranquilo-api` | As três regras de recusa, o limite exato, a aprovação e os endpoints (200 e 400) |
-| `pagamento-integracao` | Publicação do resultado e repasse da falha do banco para o retry |
+| `pagamento-integracao` | Publicação do resultado, repasse da falha do banco para o retry e mensagem do painel sem `__TypeId__` (ou com um errado) |
 | `mercado-express` | Compra PENDENTE + publicação após o commit com correlationId persistente, aprovação baixando estoque, **idempotência**, recusa sem baixa, **SMTP fora gerando FALHA sem desfazer a compra**, API 202/400/404 e telas (carrinho → finalizar → pedido, `/gerencia`) |
 
 Os testes do mercado usam H2 em memória (perfil `test`) e um RabbitTemplate
@@ -570,7 +645,7 @@ mercadoexpress-pagamentos/
 <!-- [SUBSTITUIR] Painel RabbitMQ > Exchanges > mercado.pagamentos > Bindings, ou uma mensagem aberta mostrando correlation_id e delivery_mode 2 -->
 ![RabbitMQ - bindings e mensagem](docs/04-rabbitmq-mensagens.png)
 
-<!-- [SUBSTITUIR] Vitrine em localhost:8080 com o contador do carrinho preenchido -->
+<!-- [SUBSTITUIR] Vitrine em localhost:18080 com o contador do carrinho preenchido -->
 ![Vitrine](docs/05-vitrine.png)
 
 <!-- [SUBSTITUIR] Carrinho com 2+ itens, total na etiqueta e formulário de finalização preenchido -->
@@ -619,6 +694,10 @@ mercadoexpress-pagamentos/
   `Jackson2JsonMessageConverter` foi substituído por este conversor, baseado no
   Jackson 3. O formato na fila é o mesmo (JSON + header `__TypeId__`), e o
   conversor só desserializa classes do pacote de eventos do `mercado-commons`.
+- **Portas 18080/18081/18082:** o enunciado não fixa portas; as padrão do Spring Boot
+  costumam estar ocupadas por outros projetos na máquina de desenvolvimento.
+- **Tipo inferido pelo listener** (`alwaysConvertToInferredType`): a mensagem
+  publicada à mão no painel do RabbitMQ funciona só com `content_type`.
 - **Publicação após o commit** (`@TransactionalEventListener(AFTER_COMMIT)`):
   evita que o resultado chegue antes de a compra existir no banco.
 - **Uma DLQ a mais** (`pagamento.processado.dlq`): o enunciado pede a DLQ das

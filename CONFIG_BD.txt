@@ -28,9 +28,10 @@ Como o banco e criado
 O script e idempotente (DROP TABLE IF EXISTS antes de criar) e contem:
   - DDL com PK, FK, CHECK, indices e comentarios;
   - 16 produtos (preco de venda e de custo);
-  - 42 compras historicas nos ultimos 30 dias (34 aprovadas, 8 recusadas);
+  - 42 compras historicas nos ultimos 30 dias (33 aprovadas, 8 recusadas e
+    a #42 PENDENTE, reservada para o teste de Publish message no RabbitMQ);
   - 98 itens de compra;
-  - 42 registros de e-mail (2 com FALHA de SMTP, para exemplo).
+  - 41 registros de e-mail (2 com FALHA de SMTP, para exemplo).
 
 Tabelas
 -------
