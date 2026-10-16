@@ -134,7 +134,7 @@
                             <td><a th:href="@{/pedidos/{id}(id=${c.id})}" th:text="${c.id}">42</a></td>
                             <td>
                                 <span th:text="${c.clienteNome}">Ana Souza</span>
-                                <span class="tabela__mudo" th:text="|${c.itens} itens · ${c.origem}|">3 itens · LOJA</span>
+                                <span class="tabela__mudo" th:text="|${c.itens} ${c.itens == 1 ? 'item' : 'itens'} · ${c.origem}|">3 itens · LOJA</span>
                             </td>
                             <td class="numero" th:text="|R$ ${#numbers.formatDecimal(c.valorTotal, 1, 'POINT', 2, 'COMMA')}|">R$ 89,90</td>
                             <td><span th:replace="~{fragments/layout :: seloStatus(${c.status})}"></span></td>
