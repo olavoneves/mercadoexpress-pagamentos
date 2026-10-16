@@ -24,5 +24,5 @@ COPY --from=build /build/banco-tranquilo-api/target/banco-tranquilo-api-0.0.1-SN
 USER app
 
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
-EXPOSE 8082
+EXPOSE 18082
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

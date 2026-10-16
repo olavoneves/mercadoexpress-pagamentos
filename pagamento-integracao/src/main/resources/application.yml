@@ -22,10 +22,10 @@ spring:
           max-interval: 10s
 
 server:
-  port: ${SERVER_PORT:8081}
+  port: ${SERVER_PORT:18081}
 
 banco-tranquilo:
-  url: ${BANCO_URL:http://localhost:8082}
+  url: ${BANCO_URL:http://localhost:18082}
   connect-timeout: 2s
   read-timeout: 5s
 

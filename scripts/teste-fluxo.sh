@@ -7,13 +7,13 @@
 #
 # Pre-requisito: docker compose up --build (ou os servicos rodando local).
 # Enderecos podem ser trocados por variavel de ambiente:
-#   MERCADO_URL=http://localhost:8080 BANCO_URL=http://localhost:8082 ./scripts/teste-fluxo.sh
+#   MERCADO_URL=http://localhost:18080 BANCO_URL=http://localhost:18082 ./scripts/teste-fluxo.sh
 # Nao depende de jq: o JSON e lido com grep/sed.
 # =====================================================================
 set -euo pipefail
 
-MERCADO_URL="${MERCADO_URL:-http://localhost:8080}"
-BANCO_URL="${BANCO_URL:-http://localhost:8082}"
+MERCADO_URL="${MERCADO_URL:-http://localhost:18080}"
+BANCO_URL="${BANCO_URL:-http://localhost:18082}"
 RABBIT_URL="${RABBIT_URL:-http://localhost:15672}"
 MAILPIT_URL="${MAILPIT_URL:-http://localhost:8025}"
 

@@ -50,13 +50,13 @@ spring:
           writetimeout: 5000
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:18080}
 
 mercado:
   # Remetente dos e-mails. Com Gmail precisa ser a propria conta autenticada.
   email-remetente: ${MAIL_FROM:Mercado Express <pedidos@mercadoexpress.local>}
   # Endereco usado nos links dos e-mails
-  url-publica: ${APP_URL:http://localhost:8080}
+  url-publica: ${APP_URL:http://localhost:18080}
 
 management:
   endpoints:

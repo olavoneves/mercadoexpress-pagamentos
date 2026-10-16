@@ -25,5 +25,5 @@ COPY --from=build /build/pagamento-integracao/target/pagamento-integracao-0.0.1-
 USER app
 
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
-EXPOSE 8081
+EXPOSE 18081
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

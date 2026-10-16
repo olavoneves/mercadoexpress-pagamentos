@@ -25,5 +25,5 @@ COPY --from=build /build/mercado-express/target/mercado-express-0.0.1-SNAPSHOT.j
 USER app
 
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
-EXPOSE 8080
+EXPOSE 18080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
