@@ -12,4 +12,4 @@ Nome: Luiz Gonçalves             RM: 564495
 
 Repositório GitHub: https://github.com/olavoneves/mercadoexpress-pagamentos
 IDE utilizada: IntelliJ IDEA
-Vídeo de demonstração: [PREENCHER LINK]
+Vídeo de demonstração: https://youtu.be/vApyTpE1lCk

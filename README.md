@@ -3,6 +3,8 @@
 **FIAP · TDS · Checkpoint 5 — Parte II (Microsserviços e Mensageria)**
 Professor Dr. Marcel Stefan Wagner · Turma 2TDSR
 
+**Vídeo de demonstração:** <https://youtu.be/vApyTpE1lCk>
+
 O Mercado Express da Parte I agora vende. O cliente monta o carrinho na
 vitrine (ou manda a compra em JSON pelo Postman), a compra é gravada como
 **PENDENTE** e a resposta HTTP sai na hora (**202 Accepted**). O pagamento segue
@@ -35,9 +37,10 @@ Esse comando sobe tudo do zero: PostgreSQL, RabbitMQ, Mailpit e os três serviç
 13. [Teste pelo painel do RabbitMQ](#teste-pelo-painel-do-rabbitmq)
 14. [Testes](#testes)
 15. [Estrutura do repositório](#estrutura-do-repositório)
-16. [Prints](#prints)
-17. [Decisões técnicas](#decisões-técnicas)
-18. [Integrantes](#integrantes)
+16. [Vídeo de demonstração](#vídeo-de-demonstração)
+17. [Prints](#prints)
+18. [Decisões técnicas](#decisões-técnicas)
+19. [Integrantes](#integrantes)
 
 ---
 
@@ -654,6 +657,12 @@ mercadoexpress-pagamentos/
         ├── templates/{vitrine,carrinho,pedido,gerencia,email,fragments}
         └── static/{css/app.css,js,img}   # identidade visual da Parte I
 ```
+
+---
+
+## Vídeo de demonstração
+
+Demonstração completa do projeto rodando: <https://youtu.be/vApyTpE1lCk>
 
 ---
 
